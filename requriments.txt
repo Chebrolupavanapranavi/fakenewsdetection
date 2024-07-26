@@ -2,3 +2,4 @@ pandas
 nltk
 flask
 matplotlib
+flask_cors
