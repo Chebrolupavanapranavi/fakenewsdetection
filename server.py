@@ -1,68 +1,63 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from nltk.corpus import stopwords
-
 app = Flask(__name__)
 CORS(app)
-
-
 @app.route('/', methods=['GET'])
 def home():
     return jsonify("Hello world!")
 
-# @app.route('/fakenews', methods=['POST'])
-# def data_route():
-#     nltk.download('stopwords')
-#     english_stopwords = set(stopwords.words('english'))
-#     def preprocess_text(text):
-#         text = text.lower()
-#         text = ' '.join([word for word in text.split() if word not in english_stopwords])
-#         return text
-#     fake_news = pd.read_csv('/content/Fake.csv', engine='python', on_bad_lines='skip')
-#     real_news = pd.read_csv('/content/True.csv', engine='python', on_bad_lines='skip')
-#     fake_news['label'] = 1
-#     real_news['label'] = 0
-#     data = pd.concat([fake_news, real_news], ignore_index=True)
-#     data.drop_duplicates(subset='text', inplace=True)
-#     data.dropna(subset=['text'], inplace=True)
-#     data['text'] = data['text'].apply(preprocess_text)
-#     data_subset = data.sample(frac=0.1, random_state=42)
-#     X_train, X_test, y_train, y_test = train_test_split(data_subset['text'], data_subset['label'], test_size=0.2, random_state=42)
-#     pipeline = Pipeline([
-#     ('tfidf', TfidfVectorizer(max_features=10000, ngram_range=(1, 2))),
-#     ('rf', RandomForestClassifier(n_estimators=100, random_state=42))])
-#     pipeline.fit(X_train, y_train)
-#     y_pred = pipeline.predict(X_test)
-#     accuracy = accuracy_score(y_test, y_pred)
-#     print(f'Accuracy: {accuracy}')
-#     report = classification_report(y_test, y_pred)
-#     print(f'Classification Report:\n{report}')
-#     cm = confusion_matrix(y_test, y_pred)
-#     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Real', 'Fake'], yticklabels=['Real', 'Fake'])
-#     plt.xlabel('Predicted')
-#     plt.ylabel('Actual')
-#     plt.title('Confusion Matrix')
-#     plt.show()
-#     cv_scores = cross_val_score(pipeline, data_subset['text'], data_subset['label'], cv=5)
-#     print(f'Cross-validation scores: {cv_scores}')
-#     print(f'Average cross-validation score: {np.mean(cv_scores)}')
-#     train_sizes, train_scores, test_scores = learning_curve(
-#         pipeline, data_subset['text'], data_subset['label'], cv=5, train_sizes=np.linspace(0.1, 1.0, 10), n_jobs=-1)
-#     train_scores_mean = np.mean(train_scores, axis=1)
-#     train_scores_std = np.std(train_scores, axis=1)
-#     test_scores_mean = np.mean(test_scores, axis=1)
-#     test_scores_std = np.std(test_scores, axis=1)
-#     plt.figure()
-#     plt.title("Learning Curve (Random Forest)")
-#     plt.xlabel("Training examples")
-#     plt.ylabel("Score")
-#     plt.grid()
-#     plt.fill_between(train_sizes, train_scores_mean - train_scores_std,train_scores_mean + train_scores_std, alpha=0.1, color="r")
-#     plt.fill_between(train_sizes, test_scores_mean - test_scores_std,test_scores_mean + test_scores_std, alpha=0.1, color="g")
-#     plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
-#     plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
-#     plt.legend(loc="best")
-#     plt.show()
+@app.route('/fakenews', methods=['POST'])
+def data_route():
+import pandas as pd
+import numpy as  np
+import nltk
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.pipeline import Pipeline
+import joblib
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+english_stopwords = set(stopwords.words('english'))
+def preprocess_text(text):
+    text = text.lower()
+    text = ' '.join([word for word in text.split() if word not in english_stopwords])
+    return text
+# Load the dataset with the python engine and skip bad lines
+fake_news = pd.read_csv('/content/Fake.csv', engine='python', on_bad_lines='skip')
+real_news = pd.read_csv('/content/True.csv', engine='python', on_bad_lines='skip')
+fake_news['label'] = 1
+real_news['label'] = 0
+news = pd.concat([fake_news, real_news], ignore_index=True)
+news.drop_duplicates(subset='text', inplace=True)
+news.dropna(subset=['text'], inplace=True)
+news['text'] = news['text'].apply(preprocess_text)
+print(news.info())
+print(news.head())
+print(news.isnull().sum())
+news.info()
+news.describe()
+print("Dataset Shape:", news.shape)
+print("Number of Fake News:", news[news['label'] == 1].shape[0])
+print("Number of Real News:", news[news['label'] == 0].shape[0])
+data_subset = news.sample(frac=0.1, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(data_subset['text'], data_subset['label'], test_size=0.2, random_state=42)
+pipeline = Pipeline([
+    ('tfidf', TfidfVectorizer(max_features=10000, ngram_range=(1, 2))),
+    ('rf', RandomForestClassifier(n_estimators=100, random_state=42))
+])
+pipeline.fit(X_train, y_train)
+y_pred = pipeline.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+print(f'Accuracy: {accuracy}')
+print(f'Classification Report:\n{report}')
+joblib.dump(pipeline, 'fake_news_detector_pipeline_rf.pkl')
+print('Model saved as fake_news_detector_pipeline_rf.pkl')
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
